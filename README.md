@@ -15,12 +15,17 @@ cd test-generator-mvp
 SECRET_KEY=your-secret-key-here
 DEBUG=True
 
-# Database
+#pgsql
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=test_mvp_db
 DB_USER=test_mvp_user
 DB_PASSWORD=test_mvp_password
+
+#mongo
+MONGO_URI=mongodb://admin:admin@localhost:27017/test_generator?authSource=admin
+MONGO_DBNAME=test_generator
+
 ```
 
 ## 3. Запуск базы данных
@@ -61,16 +66,18 @@ python migrations/migrate.py
 python run.py
 ```
 
-Сервер будет доступен по адресу: http://localhost:5000
+Сервер будет доступен по адресу: [http://localhost:5000](http://localhost:5000)
 
 ## 7. Проверка работоспособности
 
 ### Тестирование эндпоинтов
 
-* **Статус сервера:** http://localhost:5000/health
-* **Проверка БД:** http://localhost:5000/test-db
+* **Статус сервера:** [http://localhost:5000/health](http://localhost:5000/health)
+* **Проверка PostgreSQL:** [http://localhost:5000/test-db](http://localhost:5000/test-db)
+* **Проверка MongoDB:** [http://localhost:5000/test-mongo](http://localhost:5000/test-mongo)
 
 **Ожидаемый ответ:**
+
 ```json
 {
     "status": "OK",
