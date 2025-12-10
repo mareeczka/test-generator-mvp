@@ -1,7 +1,8 @@
 from flask import Flask, jsonify
 from app.config import Config
 from app.repositories.pg_repo import PostgresRepository
-from .mongo import mongo, init_mongo
+from .mongo import mongo, init_mongo  # импортируем функцию init_mongo
+from .mongo_setup import MongoSetup
 
 def create_app():
     app = Flask(__name__)
@@ -10,8 +11,15 @@ def create_app():
     # Инициализация репозитория
     pg_repo = PostgresRepository()
 
-    # Инициализация MongoDB
     mongo_connected = init_mongo(app)
+
+    # Создание индексов MongoDB при старте
+    if mongo_connected:
+        mongo_setup = MongoSetup(mongo.db)
+        if mongo_setup.ensure_indexes():
+            app.logger.info("MongoDB indexes created successfully")
+        else:
+            app.logger.warning("Failed to create some MongoDB indexes")
 
     @app.route('/test-mongo')
     def test_mongo():
@@ -22,17 +30,30 @@ def create_app():
             }), 500
 
         try:
-            # Пингуем сервер
             result = mongo.db.command("ping")
+            collections = mongo.db.list_collection_names()
+
+            # Информация об индексах
+            indexes_info = {}
+            for coll_name in ['test_documents', 'materials_raw']:
+                if coll_name in collections:
+                    indexes = list(mongo.db[coll_name].list_indexes())
+                    indexes_info[coll_name] = [idx['name'] for idx in indexes]
+
             return jsonify({
                 "status": "OK",
                 "message": "MongoDB connection successful",
-                "result": result
+                "database": mongo.db.name,
+                "ping_result": result,
+                "collections": collections,
+                "indexes": indexes_info
             })
         except Exception as e:
+            import traceback
             return jsonify({
                 "status": "ERROR",
-                "error": str(e)
+                "error": str(e),
+                "traceback": traceback.format_exc()
             }), 500
 
     @app.route('/health')

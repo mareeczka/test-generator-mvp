@@ -60,7 +60,13 @@ pip install -r requirements.txt
 python migrations/migrate.py
 ```
 
-## 6. Запуск сервера
+## 6. Создание индексов MongoDB
+
+``` bash
+python init_mongo_indexes.py
+```
+
+## 7. Запуск сервера
 
 ```bash
 python run.py
@@ -68,7 +74,7 @@ python run.py
 
 Сервер будет доступен по адресу: [http://localhost:5000](http://localhost:5000)
 
-## 7. Проверка работоспособности
+## 8. Проверка работоспособности
 
 ### Тестирование эндпоинтов
 
