@@ -51,9 +51,9 @@ class PostgresRepository:
                 return cursor.fetchall()
             return None
 
-    def execute_query_one(self, query, params=None):
+    def execute_query_one(self, query, params=None, commit=False):
         """Выполнить запрос и вернуть одну строку"""
-        with self.get_cursor() as cursor:
+        with self.get_cursor(commit=commit) as cursor:
             cursor.execute(query, params or ())
             return cursor.fetchone()
 
