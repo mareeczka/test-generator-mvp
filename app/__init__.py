@@ -3,10 +3,14 @@ from app.config import Config
 from app.repositories.pg_repo import PostgresRepository
 from .mongo import mongo, init_mongo  # импортируем функцию init_mongo
 from .mongo_setup import MongoSetup
+from app.auth import auth_bp
 
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
+
+    app.secret_key = "dev-secret"
+    app.register_blueprint(auth_bp)
 
     # Инициализация репозитория
     pg_repo = PostgresRepository()

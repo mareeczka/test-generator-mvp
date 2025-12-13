@@ -26,6 +26,11 @@ DB_PASSWORD=test_mvp_password
 MONGO_URI=mongodb://admin:admin@localhost:27017/test_generator?authSource=admin
 MONGO_DBNAME=test_generator
 
+#google
+GOOGLE_CLIENT_ID=XXX-XXX.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=XXX-YYYY-ZZZZ
+GOOGLE_REDIRECT_URI=http://localhost:5000/auth/google/callback #replace with your callback uri
+
 ```
 
 ## 3. Запуск базы данных
@@ -79,8 +84,6 @@ python run.py
 ### Тестирование эндпоинтов
 
 * **Статус сервера:** [http://localhost:5000/health](http://localhost:5000/health)
-* **Проверка PostgreSQL:** [http://localhost:5000/test-db](http://localhost:5000/test-db)
-* **Проверка MongoDB:** [http://localhost:5000/test-mongo](http://localhost:5000/test-mongo)
 
 **Ожидаемый ответ:**
 
@@ -91,3 +94,7 @@ python run.py
     "database": "OK"
 }
 ```
+
+* **Проверка PostgreSQL:** [http://localhost:5000/test-db](http://localhost:5000/test-db)
+* **Проверка MongoDB:** [http://localhost:5000/test-mongo](http://localhost:5000/test-mongo)
+* **Проверка Google OAuth** [http://localhost:5000/auth/google/login](http://localhost:5000/auth/google/login) 
