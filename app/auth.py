@@ -8,7 +8,7 @@ from app.utils.jwt_utils import decode_jwt
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
-def jwt_required(f):
+def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         auth_header = request.headers.get("Authorization")
@@ -133,7 +133,7 @@ def google_callback():
 
 
 @auth_bp.route("/me")
-@jwt_required
+@token_required
 def get_me():
     from app.repositories.pg_repo import PostgresRepository
     pg_repo = PostgresRepository()

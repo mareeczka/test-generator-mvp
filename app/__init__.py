@@ -5,6 +5,7 @@ from app.repositories.pg_repo import PostgresRepository
 from .mongo import mongo, init_mongo
 from .mongo_setup import MongoSetup
 from app.auth import auth_bp
+from app.api.materials import materials_bp
 
 def create_app():
     app = Flask(__name__)
@@ -17,6 +18,7 @@ def create_app():
         app.config.from_object(Config)
     app.secret_key = "dev-secret"
     app.register_blueprint(auth_bp)
+    app.register_blueprint(materials_bp)
 
     # Инициализация репозитория
     pg_repo = PostgresRepository()
