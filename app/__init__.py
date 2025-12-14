@@ -6,19 +6,31 @@ from .mongo import mongo, init_mongo
 from .mongo_setup import MongoSetup
 from app.auth import auth_bp
 from app.api.materials import materials_bp
+from app.api.tests import tests_bp
+from flask.json.provider import DefaultJSONProvider
 
 def create_app():
     app = Flask(__name__)
-    env = os.getenv('FLASK_ENV', 'development')  # 'development', 'production'
+
+    env = os.getenv('FLASK_ENV', 'development')
+
     if env == 'production':
         app.config.from_object(ProductionConfig)
     elif env == 'development':
         app.config.from_object(DevelopmentConfig)
     else:
         app.config.from_object(Config)
+
+    class CustomJSONProvider(DefaultJSONProvider):
+        ensure_ascii = False
+        sort_keys = False
+
+    app.json = CustomJSONProvider(app)
+
     app.secret_key = "dev-secret"
     app.register_blueprint(auth_bp)
     app.register_blueprint(materials_bp)
+    app.register_blueprint(tests_bp)
 
     # Инициализация репозитория
     pg_repo = PostgresRepository()
@@ -142,20 +154,15 @@ def create_app():
                 'error': str(e)
             }), 500
 
-    # use_mock = app.config.get("USE_MOCK_QUESTION_GENERATOR", True)
-    # if use_mock:
-    #     from app.question_generator.mock_routes import question_bp
-    #     app.logger.info("Using MOCK question generator (dev mode)")
-    # else:
-    #     from app.question_generator.routes import question_bp
-    #     model_path = app.config.get("MODEL_PATH")
-    #     if not model_path or not os.path.exists(model_path):
-    #         app.logger.error(f"MODEL_PATH not set or invalid: {model_path}")
-    #         app.logger.error("Real question generator disabled — falling back to mock")
-    #         from app.question_generator.mock_routes import question_bp
-    #     else:
-    #         app.logger.info(f"Using REAL question generator with model at: {model_path}")
-
-    # app.register_blueprint(question_bp)
+    use_mock = app.config.get("USE_MOCK_QUESTION_GENERATOR", True)
+    if use_mock:
+        app.logger.info("Using MOCK question generator (dev mode)")
+    else:
+        model_path = app.config.get("MODEL_PATH")
+        if not model_path or not os.path.exists(model_path):
+            app.logger.error(f"MODEL_PATH not set or invalid: {model_path}")
+            app.logger.warning("Real generator configured but model not found - will fail on generation")
+        else:
+            app.logger.info(f"Using REAL question generator with model at: {model_path}")
 
     return app
