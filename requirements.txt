@@ -11,3 +11,4 @@ requests
 authlib
 google-auth
 google-auth-oauthlib
+pyjwt

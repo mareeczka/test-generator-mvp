@@ -2,8 +2,31 @@ import secrets
 import urllib.parse
 import requests
 from flask import Blueprint, redirect, request, jsonify, session, current_app
+from app.utils.jwt_utils import create_jwt
+from functools import wraps
+from app.utils.jwt_utils import decode_jwt
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
+
+def jwt_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return jsonify({"error": "Missing or invalid token"}), 401
+
+        token = auth_header.split(" ")[1]
+        payload = decode_jwt(token)
+
+        if not payload:
+            return jsonify({"error": "Invalid or expired token"}), 401
+
+        # Add user info to request context
+        request.user_id = payload["user_id"]
+        request.google_id = payload["google_id"]
+
+        return f(*args, **kwargs)
+    return decorated
 
 @auth_bp.route("/google/login")
 def google_login():
@@ -84,17 +107,18 @@ def google_callback():
         else:
             print(f"User found: {user}")
 
-        # Store user in session
-        session["user_id"] = str(user["id"])
-        session["google_id"] = user["google_id"]
+        token = create_jwt(str(user["id"]), user["google_id"])
 
         return jsonify({
             "status": "success",
-            "user_id": str(user["id"]),
-            "google_id": user["google_id"],
-            "email": userinfo["email"],
-            "name": userinfo.get("name"),
-            "picture": userinfo.get("picture"),
+            "token": token,
+            "user": {
+                "user_id": str(user["id"]),
+                "google_id": user["google_id"],
+                "email": userinfo["email"],
+                "name": userinfo.get("name"),
+                "picture": userinfo.get("picture"),
+            }
         })
 
     except Exception as e:
@@ -106,3 +130,24 @@ def google_callback():
             "error": str(e),
             "traceback": traceback.format_exc()
         }), 500
+
+
+@auth_bp.route("/me")
+@jwt_required
+def get_me():
+    from app.repositories.pg_repo import PostgresRepository
+    pg_repo = PostgresRepository()
+
+    user = pg_repo.execute_query_one(
+        "SELECT id, google_id, created_at FROM users WHERE id = %s",
+        (request.user_id,)
+    )
+
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    return jsonify({
+        "user_id": str(user["id"]),
+        "google_id": user["google_id"],
+        "created_at": user["created_at"].isoformat()
+    })
