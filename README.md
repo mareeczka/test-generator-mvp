@@ -31,6 +31,14 @@ GOOGLE_CLIENT_ID=XXX-XXX.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=XXX-YYYY-ZZZZ
 GOOGLE_REDIRECT_URI=http://localhost:5000/auth/google/callback #replace with your callback uri
 
+#jwt
+JWT_SECRET=xxxx-xxxxxxx
+
+#s3
+S3_ENDPOINT=http://your-s3-endpoint:9000
+S3_ACCESS_KEY=XXXX-YYYY-ZZZZ
+S3_SECRET_KEY=XXXXX-YYYY-ZZZZ
+S3_BUCKET_NAME=bucket-name
 ```
 
 ## 3. Запуск базы данных
@@ -98,3 +106,4 @@ python run.py
 * **Проверка PostgreSQL:** [http://localhost:5000/test-db](http://localhost:5000/test-db)
 * **Проверка MongoDB:** [http://localhost:5000/test-mongo](http://localhost:5000/test-mongo)
 * **Проверка Google OAuth** [http://localhost:5000/auth/google/login](http://localhost:5000/auth/google/login) 
+* **Проверка s3**[http://localhost:5000/test-s3](http://localhost:5000/test-s3)
