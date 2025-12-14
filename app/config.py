@@ -18,7 +18,6 @@ class Config:
     MONGO_DBNAME = os.getenv("MONGO_DBNAME")
 
     #google
-
     GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
     GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
 
@@ -35,3 +34,21 @@ class Config:
     JWT_SECRET = os.getenv("JWT_SECRET", "your-secret-key-change-in-production")
     JWT_ALGORITHM = "HS256"
     JWT_EXPIRATION_HOURS = 24 * 7
+
+    #s3
+    S3_ENDPOINT = os.getenv("S3_ENDPOINT", "http://localhost:9000")
+    S3_ACCESS_KEY = os.getenv("S3_ACCESS_KEY", "minio_user")
+    S3_SECRET_KEY = os.getenv("S3_SECRET_KEY", "minio_password")
+    S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME", "test-materials")
+    S3_REGION = os.getenv("S3_REGION", "us-east-1")
+
+class DevelopmentConfig(Config):
+    DEBUG = True
+    # No real model loading
+    USE_MOCK_QUESTION_GENERATOR = True
+    MOCK_GENERATION_DELAY = 2.0
+
+class ProductionConfig(Config):
+    DEBUG = False
+    USE_MOCK_QUESTION_GENERATOR = False
+    MODEL_PATH = os.environ.get('MODEL_PATH')

@@ -1,5 +1,4 @@
 version: '3.8'
-
 services:
   postgres:
     image: postgres:15
@@ -31,6 +30,25 @@ services:
     volumes:
       - mongo-data:/data/db
 
+  minio:
+    image: minio/minio:latest
+    container_name: test_mvp_minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minio_user
+      MINIO_ROOT_PASSWORD: minio_password
+    ports:
+      - "9000:9000"   # S3 API endpoint
+      - "9001:9001"   # MinIO Console (web UI)
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   postgres_data:
   mongo-data:
+  minio-data:

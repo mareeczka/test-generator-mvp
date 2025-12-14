@@ -12,3 +12,4 @@ authlib
 google-auth
 google-auth-oauthlib
 pyjwt
+boto3
