@@ -1,4 +1,5 @@
 from flask import Flask, jsonify
+import json
 import os
 from app.config import Config, DevelopmentConfig, ProductionConfig
 from app.repositories.pg_repo import PostgresRepository
@@ -22,8 +23,8 @@ def create_app():
         app.config.from_object(Config)
 
     class CustomJSONProvider(DefaultJSONProvider):
-        ensure_ascii = False
-        sort_keys = False
+        ensure_ascii = False   # кириллица будет выводиться как есть
+        sort_keys = False      # ключи не сортируются
 
     app.json = CustomJSONProvider(app)
 
