@@ -93,11 +93,11 @@ class TestService:
 
     def get_test(self, test_id: str, user_id: str):
         query = """
-            SELECT t.id, t.title, t.description, t.status, t.current_version,
-                   t.material_id, m.title as material_title, t.created_at, t.updated_at
-            FROM tests t
-            LEFT JOIN materials m ON t.material_id = m.id
-            WHERE t.id = %s AND t.user_id = %s
+        SELECT t.id, t.title, t.description, t.status, t.current_version,
+        t.material_id, m.title as material_title, t.created_at, t.updated_at
+        FROM tests t
+        LEFT JOIN materials m ON t.material_id = m.id
+        WHERE t.id = %s AND t.user_id = %s
         """
 
         result = self.pg_repo.execute_query_one(query, (test_id, user_id))
@@ -105,8 +105,8 @@ class TestService:
         if not result:
             return None
 
-        # Get questions from MongoDB
-        mongo_doc = self.mongo_repo.find_one('test_documents', {"test_id": test_id})
+        # Get questions from MongoDB (latest version)
+        mongo_doc = self.mongo_repo.get_by_test_id(test_id)
 
         questions = mongo_doc.get('questions', []) if mongo_doc else []
 
@@ -250,3 +250,120 @@ class TestService:
         )
 
         return True
+
+    def update_test_content(self, test_id: str, user_id: str, questions: list, create_version: bool = True):
+        """
+        Update test questions (editing)
+        :param test_id: ID теста
+        :param user_id: ID пользователя
+        :param questions: Новые вопросы
+        :param create_version: Создать новую версию (True) или обновить текущую (False)
+        :return: Новая версия или False при ошибке
+        """
+        # Verify ownership
+        test_check = self.pg_repo.execute_query_one(
+            "SELECT id, current_version FROM tests WHERE id = %s AND user_id = %s",
+            (test_id, user_id)
+        )
+
+        if not test_check:
+            return False
+
+        if create_version:
+            # Создать новую версию в MongoDB
+            new_version = self.mongo_repo.create_new_version(test_id, questions)
+
+            if not new_version:
+                return False
+
+            # Обновить current_version в PostgreSQL
+            self.pg_repo.execute_query(
+                "UPDATE tests SET current_version = %s, updated_at = NOW() WHERE id = %s",
+                (new_version, test_id),
+                commit=True
+            )
+
+            return new_version
+        else:
+            # Обновить существующую версию
+            current_version = test_check['current_version']
+
+            self.mongo_repo.update_one(
+                'test_documents',
+                {"test_id": test_id, "version": current_version},
+                {
+                    "$set": {
+                        "questions": questions,
+                        "updated_at": datetime.utcnow()
+                    }
+                }
+            )
+
+            # Update timestamp in PostgreSQL
+            self.pg_repo.execute_query(
+                "UPDATE tests SET updated_at = NOW() WHERE id = %s",
+                (test_id,),
+                commit=True
+            )
+
+            return current_version
+
+    def get_test_version_history(self, test_id: str, user_id: str):
+        """
+        Получить историю версий теста
+        """
+        test_check = self.pg_repo.execute_query_one(
+            "SELECT id FROM tests WHERE id = %s AND user_id = %s",
+            (test_id, user_id)
+        )
+
+        if not test_check:
+            return None
+
+        versions = self.mongo_repo.get_test_versions(test_id)
+
+        return [{
+            'version': v['version'],
+            'question_count': len(v.get('questions', [])),
+            'created_at': v['created_at'].isoformat(),
+            'updated_at': v['updated_at'].isoformat()
+        } for v in versions]
+
+    def get_test_by_version(self, test_id: str, user_id: str, version: int):
+        """
+        Получить конкретную версию теста
+        """
+        query = """
+        SELECT t.id, t.title, t.description, t.status, t.current_version,
+        t.material_id, m.title as material_title, t.created_at, t.updated_at
+        FROM tests t
+        LEFT JOIN materials m ON t.material_id = m.id
+        WHERE t.id = %s AND t.user_id = %s
+        """
+
+        result = self.pg_repo.execute_query_one(query, (test_id, user_id))
+
+        if not result:
+            return None
+
+        mongo_doc = self.mongo_repo.get_by_test_id(test_id, version=version)
+
+        if not mongo_doc:
+            return None
+
+        questions = mongo_doc.get('questions', [])
+
+        return {
+            "id": result['id'],
+            "title": result['title'],
+            "description": result['description'],
+            "status": result['status'],
+            "version": mongo_doc['version'],
+            "current_version": result['current_version'],
+            "material_id": result['material_id'],
+            "material_title": result['material_title'],
+            "questions": questions,
+            "question_count": len(questions),
+            "created_at": mongo_doc['created_at'].isoformat(),
+            "updated_at": mongo_doc['updated_at'].isoformat()
+        }

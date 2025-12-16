@@ -190,39 +190,68 @@ def get_test_content(test_id):
         }), 500
 
 
+# УДАЛИ ЭТО (первый patch_test_content)
+# @tests_bp.route('/<test_id>/content', methods=['PATCH'])
+# @token_required
+# def patch_test_content(test_id):
+#     ...старая версия...
+
+@tests_bp.route('/<test_id>', methods=['DELETE'])
+@token_required
+def delete_test(test_id):
+    """
+    Delete a test
+    """
+    try:
+        service = TestService()
+        success = service.delete_test(test_id, request.user_id)
+        if not success:
+            return jsonify({"error": "Test not found or unauthorized"}), 404
+        return jsonify({
+            "success": True,
+            "message": "Test deleted successfully"
+        }), 200
+    except Exception as e:
+        print(f"Error deleting test: {e}")
+        traceback.print_exc()
+        return jsonify({
+            "error": "Failed to delete test",
+            "details": str(e)
+        }), 500
+
 @tests_bp.route('/<test_id>/content', methods=['PATCH'])
 @token_required
-def update_test_content(test_id):
+def patch_test_content(test_id):
     """
-    Update test questions
+    Редактировать содержимое теста (вопросы)
     Body: {
-        "questions": [ ... array of question objects ... ]
+        "questions": [...],
+        "create_version": true  // optional, default true
     }
     """
     try:
         data = request.get_json()
+        if not data or 'questions' not in data:
+            return jsonify({"error": "questions field is required"}), 400
 
-        if not data:
-            return jsonify({"error": "No JSON data provided"}), 400
-
-        questions = data.get('questions')
-
-        if not isinstance(questions, list):
-            return jsonify({"error": "questions must be an array"}), 400
+        questions = data['questions']
+        create_version = data.get('create_version', True)
 
         service = TestService()
-        success = service.update_test_content(
-            test_id=test_id,
-            user_id=request.user_id,
-            questions=questions
+        result = service.update_test_content(
+            test_id,
+            request.user_id,  # <-- ИЗ ТОКЕНА
+            questions,
+            create_version
         )
 
-        if not success:
+        if not result:
             return jsonify({"error": "Test not found or unauthorized"}), 404
 
         return jsonify({
             "success": True,
-            "message": "Test content updated successfully",
+            "message": "Test updated successfully",
+            "version": result,
             "question_count": len(questions)
         }), 200
 
@@ -234,29 +263,55 @@ def update_test_content(test_id):
             "details": str(e)
         }), 500
 
-
-@tests_bp.route('/<test_id>', methods=['DELETE'])
+@tests_bp.route('/<test_id>/versions', methods=['GET'])
 @token_required
-def delete_test(test_id):
+def get_test_versions(test_id):
     """
-    Delete a test
+    Получить историю версий теста
     """
     try:
         service = TestService()
-        success = service.delete_test(test_id, request.user_id)
+        versions = service.get_test_version_history(
+            test_id,
+            request.user_id  # <-- ИЗ ТОКЕНА
+        )
 
-        if not success:
+        if versions is None:
             return jsonify({"error": "Test not found or unauthorized"}), 404
 
-        return jsonify({
-            "success": True,
-            "message": "Test deleted successfully"
-        }), 200
+        return jsonify({"versions": versions}), 200
 
     except Exception as e:
-        print(f"Error deleting test: {e}")
+        print(f"Error getting test versions: {e}")
         traceback.print_exc()
         return jsonify({
-            "error": "Failed to delete test",
+            "error": "Failed to get test versions",
+            "details": str(e)
+        }), 500
+
+@tests_bp.route('/<test_id>/versions/<int:version>', methods=['GET'])
+@token_required
+def get_test_version(test_id, version):
+    """
+    Получить конкретную версию теста
+    """
+    try:
+        service = TestService()
+        test = service.get_test_by_version(
+            test_id,
+            request.user_id,  # <-- ИЗ ТОКЕНА
+            version
+        )
+
+        if not test:
+            return jsonify({"error": "Test or version not found"}), 404
+
+        return jsonify(test), 200
+
+    except Exception as e:
+        print(f"Error getting test version: {e}")
+        traceback.print_exc()
+        return jsonify({
+            "error": "Failed to get test version",
             "details": str(e)
         }), 500
